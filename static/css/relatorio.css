@@ -2,7 +2,7 @@
 @media print {
     @page {
         size: A4 portrait;
-        margin: 2cm 1.5cm;
+        margin: 1.5cm 1cm;
     }
 
     body {
@@ -81,6 +81,21 @@
     .table-responsive {
         overflow: visible !important;
     }
+
+    .filtro-relatorio {
+    display: none !important;
+    }
+
+    .table thead th {
+    color: #000 !important;
+    font-weight: bold !important;
+    }
+
+    .table-dark {
+        background-color: #f0f0f0 !important;
+        color: #000 !important;
+    }
+
 }
 
 /* Estilos apenas para tela (não afetam impressão) */
@@ -93,3 +108,4 @@
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     }
 }
+
