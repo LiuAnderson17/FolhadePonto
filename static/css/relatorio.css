@@ -1,0 +1,95 @@
+/* === Estilos gerais para impressão (relatório) === */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 2cm 1.5cm;
+    }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12pt;
+        color: #000;
+        background: #fff !important;
+    }
+
+    .navbar,
+    .toast-container,
+    .card-footer {
+        display: none !important;
+    }
+
+    .container {
+        width: 100% !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    .card-header {
+        background: #fff !important;
+        color: #000 !important;
+        border-bottom: 2px solid #000 !important;
+        padding: 10px 0 !important;
+    }
+
+    h2, h3, h4, h5 {
+        color: #000 !important;
+        margin-top: 0.5cm !important;
+    }
+
+    .table {
+        width: 100% !important;
+        font-size: 10pt !important;
+        border-collapse: collapse !important;
+    }
+
+    .table th,
+    .table td {
+        border: 1px solid #000 !important;
+        padding: 6px 8px !important;
+        vertical-align: middle !important;
+    }
+
+    .table thead {
+        background: #f0f0f0 !important;
+        font-weight: bold !important;
+    }
+
+    .alert {
+        border: 1px solid #000 !important;
+        background: #fff !important;
+        color: #000 !important;
+        page-break-inside: avoid;
+    }
+
+    .text-success { color: #006400 !important; }
+    .text-danger  { color: #8B0000 !important; }
+
+    /* Evitar quebra de página no meio da tabela */
+    .table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Esconder elementos responsivos na impressão */
+    .table-responsive {
+        overflow: visible !important;
+    }
+}
+
+/* Estilos apenas para tela (não afetam impressão) */
+@media screen {
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #004085 100%);
+    }
+
+    .text-shadow {
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    }
+}

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load filters %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/relatorio.css' %}">
+{% endblock %}
+
+{% block title %}Relatório de Ponto{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+    <!-- Formulário de filtro de período -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-12 col-lg-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="mb-3">Selecione o período desejado</h5>
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="data_inicio" class="form-label">Data Inicial</label>
+                            <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{ data_inicio }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="data_fim" class="form-label">Data Final</label>
+                            <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ data_fim }}" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">Filtrar Período</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo principal do relatório -->
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                
+                <!-- Cabeçalho visível só na tela -->
+                <div class="card-header bg-primary text-white text-center py-4 d-print-none">
+                    <h3 class="mb-0 fw-bold">Relatório de Ponto</h3>
+                    <h5 class="mb-0 mt-2">{{ periodo_str }}</h5>
+                </div>
+
+                <!-- Cabeçalho exclusivo para impressão -->
+                <div class="d-none d-print-block text-center mb-5">
+                    <h2 class="fw-bold">RELATÓRIO DE PONTO</h2>
+                    <h5>Funcionário: {{ user.get_full_name|default:user.username }}</h5>
+                    <h5>Período: {{ periodo_str }}</h5>
+                    <hr class="my-4 border-dark">
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- Resumo de saldo acumulado -->
+                    <div class="alert alert-light border mb-5 text-center">
+                        <h4 class="mb-3">Saldo Acumulado do Período</h4>
+                        <h2 class="{{ saldo_acumulado_class }} fw-bold">
+                            {{ saldo_acumulado_str }}
+                        </h2>
+                        <small class="text-muted">
+                            {% if saldo_acumulado.total_seconds >= 0 %}
+                                Horas extras acumuladas
+                            {% else %}
+                                Horas devidas
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <!-- Tabela de dias -->
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Marcações</th>
+                                    <th>Tempo Trabalhado</th>
+                                    <th>Saldo do Dia</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in relatorio_dias %}
+                                    <tr>
+                                        <td>{{ item.dia|date:"d/m/Y" }}</td>
+                                        <td>
+                                            {% for reg in item.marcações %}
+                                                <span class="badge 
+                                                    {% if reg.tipo == 'E' %} bg-success-subtle text-success {% else %} bg-danger-subtle text-danger {% endif %} me-1">
+                                                    {{ reg.get_tipo_display }} {{ reg.data_hora|time:"H:i" }}
+                                                </span>
+                                            {% empty %}
+                                                <span class="text-muted">Nenhuma</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if item.tempo_trabalhado %}
+                                                {{ item.tempo_trabalhado|timedeltaformat }}
+                                                {% if item.tem_intervalo %}
+                                                    <small class="d-block text-muted">(Intervalo: {{ item.intervalo_real|timedeltaformat }})</small>
+                                                {% endif %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td class="{% if item.saldo_dia.total_seconds > 0 %}text-success{% elif item.saldo_dia.total_seconds < 0 %}text-danger{% else %}text-muted{% endif %} fw-bold">
+                                            {% if item.saldo_dia.total_seconds != 0 %}
+                                                {% if item.saldo_dia.total_seconds > 0 %}+{% endif %}
+                                                {{ item.saldo_dia|timedeltaformat }}
+                                            {% else %}
+                                                0h 0min
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            Nenhum registro no período selecionado.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Rodapé só na tela -->
+                <div class="card-footer bg-light text-center py-3 d-print-none">
+                    <small class="text-muted">Relatório gerado em {{ hoje|date:"d/m/Y" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,58 @@
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<h4 class="mb-5">
+    Olá, <strong>{{ user.first_name|default:user.username }}</strong>!
+</h4>
+
+<form hx-post="{% url 'bater_ponto' %}"
+      hx-target="#marcacoes-area"
+      hx-swap="innerHTML"
+      hx-indicator="#loading-spinner">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-lg w-100 py-5 fs-3 fw-bold shadow-lg mb-5 rounded-4
+        {% if proximo_tipo == 'Entrada' %} btn-success {% else %} btn-danger {% endif %}">
+        <i class="bi bi-clock-history me-2 fs-2"></i>
+        REGISTRAR {{ proximo_tipo|upper }}
+    </button>
+</form>
+
+<h5 class="mb-4 text-muted fw-semibold">Marcações de hoje</h5>
+
+{% if registros_hoje %}
+    <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+        {% for reg in registros_hoje %}
+            <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div>
+                    <span class="badge 
+                        {% if reg.tipo == 'E' %} bg-success-subtle text-success {% else %} bg-danger-subtle text-danger {% endif %} 
+                        me-3 px-3 py-2">
+                        {{ reg.get_tipo_display }}
+                    </span>
+                </div>
+                <div class="fw-medium">
+                    {{ reg.data_hora|time:"H:i:s" }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% with ultimo=registros_hoje.last %}
+        {% if ultimo %}
+            <small class="d-block mt-3 text-muted">
+                Última marcação: {{ ultimo.data_hora|time:"H:i:s" }} ({{ ultimo.get_tipo_display }})
+            </small>
+        {% endif %}
+    {% endwith %}
+{% else %}
+    <div class="alert alert-light border text-center py-4 mb-0 rounded-3">
+        <i class="bi bi-info-circle me-2"></i>
+        Ainda não há marcações registradas hoje.
+    </div>
+{% endif %}

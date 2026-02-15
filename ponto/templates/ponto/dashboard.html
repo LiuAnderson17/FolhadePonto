@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Meu Controle de Ponto{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9 col-12">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                
+               <!-- Cabeçalho -->
+                <!-- Cabeçalho com texto azul estilizado -->
+                <div class="card-header bg-gradient-primary text-center py-4">
+                    <h3 class="mb-0 fw-bold" style="color: #1c0ca8; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);">
+                        Registro de Ponto
+                    </h3>
+                    <small class="d-block mt-2" style="color: #1c0ca8; opacity: 0.9; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);">
+                        Hoje: {{ hoje }}
+                    </small>
+                </div>
+
+                <div class="card-body p-5 text-center">
+                    
+                    <!-- Área principal atualizada pelo HTMX -->
+                    <div id="marcacoes-area"> 
+                        <h4 class="mb-5">
+                            Olá, <strong>{{ user.first_name|default:user.username }}</strong>!
+                        </h4>
+
+                        <!-- Botão com HTMX + condição de desabilitado -->
+                        <form hx-post="{% url 'bater_ponto' %}"
+                              hx-target="#marcacoes-area"
+                              hx-swap="innerHTML"
+                              hx-indicator="#loading-spinner">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    {% if registros_hoje|length >= 4 %} disabled {% endif %}
+                                    class="btn btn-lg w-100 py-5 fs-3 fw-bold shadow-lg mb-5 rounded-4
+                                           {% if registros_hoje|length >= 4 %} btn-secondary disabled 
+                                           {% elif proximo_tipo == 'Entrada' %} btn-success 
+                                           {% else %} btn-danger {% endif %}">
+                                <i class="bi bi-clock-history me-2 fs-2"></i>
+                                {% if registros_hoje|length >= 4 %}
+                                    Limite de 4 marcações atingido
+                                {% else %}
+                                    REGISTRAR {{ proximo_tipo|upper }}
+                                {% endif %}
+                            </button>
+                        </form>
+
+                        <!-- Lista de marcações -->
+                        <h5 class="mb-4 text-muted fw-semibold">Marcações de hoje</h5>
+
+                        {% if registros_hoje %}
+                            <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                                {% for reg in registros_hoje %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                                        <div>
+                                            <span class="badge 
+                                                {% if reg.tipo == 'E' %} bg-success-subtle text-success 
+                                                {% else %} bg-danger-subtle text-danger {% endif %} 
+                                                me-3 px-3 py-2">
+                                                {{ reg.get_tipo_display }}
+                                            </span>
+                                        </div>
+                                        <div class="fw-medium">
+                                            {{ reg.data_hora|time:"H:i:s" }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            {% with ultimo=registros_hoje.last %}
+                                {% if ultimo %}
+                                    <small class="d-block mt-3 text-muted">
+                                        Última marcação: {{ ultimo.data_hora|time:"H:i:s" }} 
+                                        ({{ ultimo.get_tipo_display }})
+                                    </small>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <div class="alert alert-light border text-center py-4 mb-0 rounded-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Ainda não há marcações registradas hoje.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Spinner de loading -->
+                    <div id="loading-spinner" class="htmx-indicator text-center mt-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <small class="d-block mt-2 text-muted">Registrando ponto...</small>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light text-center py-3">
+                    <small class="text-muted">Sistema de Controle de Ponto • v1.0</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
