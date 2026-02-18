@@ -2,7 +2,7 @@
 
 Sistema web simples e moderno para registro de ponto eletrônico, desenvolvido com **Django** + **HTMX** + **Bootstrap 5**. Ideal para pequenas empresas, freelancers ou uso pessoal que precisam controlar horas trabalhadas de forma flexível.
 
-## Funcionalidades Principais
+# Funcionalidades Principais
 
 - Registro de ponto com botão único (alternando Entrada/Saída automaticamente)
 - Limite de **4 marcações por dia** (para evitar erros)
@@ -18,7 +18,7 @@ Sistema web simples e moderno para registro de ponto eletrônico, desenvolvido c
 - Painel admin para edição de registros (data/hora editável para superusuário)
 - Login/logout com sessão segura
 
-## Tecnologias Utilizadas
+# Tecnologias Utilizadas
 
 - Backend: Django 5.x
 - Frontend: Bootstrap 5.3 + Bootstrap Icons
@@ -26,13 +26,13 @@ Sistema web simples e moderno para registro de ponto eletrônico, desenvolvido c
 - Banco de dados: SQLite (padrão, fácil de trocar para PostgreSQL/MySQL)
 - Autenticação: Django built-in
 
-## Pré-requisitos
+# Pré-requisitos
 
 - Python 3.10 ou superior
 - pip (gerenciador de pacotes Python)
 - Ambiente virtual recomendado (venv)
 
-## Instalação
+# Instalação
 
 1. Clone o repositório:
 ```
@@ -44,11 +44,11 @@ Sistema web simples e moderno para registro de ponto eletrônico, desenvolvido c
 ```
   python -m venv venv
 ```
-# Windows
+## Windows
 ```
   venv\Scripts\activate
 ```
-# Linux/Mac
+## Linux/Mac
 ```
   source venv/bin/activate
 ```
