@@ -35,25 +35,37 @@ Sistema web simples e moderno para registro de ponto eletrônico, desenvolvido c
 ## Instalação
 
 1. Clone o repositório:
-   ```
+```
    git clone https://github.com/LiuAnderson17/FolhadePonto.git
    cd controle-de-ponto
-   ```
+```
 
 2. Crie e ative o ambiente virtual:
 ```
   python -m venv venv
 ```
 # Windows
-  ```
+```
   venv\Scripts\activate
-  ```
+```
 # Linux/Mac
-  ```
+```
   source venv/bin/activate
-  ```
+```
 
 3. Instale as dependências:
 ```
-pip install -r requirements.txt
+  pip install -r requirements.txt
 ```
+
+4. Crie o banco de dados e superusuário:
+```
+  python manage.py makemigrations
+  python manage.py migrate
+  python manage.py createsuperuser
+```
+5. Execute o servidor de desenvolvimento:
+```
+  python manage.py runserver
+```
+
