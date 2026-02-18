@@ -36,8 +36,8 @@ Sistema web simples e moderno para registro de ponto eletrônico, desenvolvido c
 
 ## 1. Clone o repositório:
 ```
-   git clone https://github.com/LiuAnderson17/FolhadePonto.git
-   cd controle-de-ponto
+  git clone https://github.com/LiuAnderson17/FolhadePonto.git
+  cd controle-de-ponto
 ```
 
 ## 2. Crie e ative o ambiente virtual:
