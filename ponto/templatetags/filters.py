@@ -9,9 +9,15 @@ def timedeltaformat(td):
         return "0h 0min"
     
     total_seconds = int(td.total_seconds())
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    
+
+    # Trata sinal corretamente
+    sign = '-' if total_seconds < 0 else ''
+    total_seconds = abs(total_seconds)
+
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes = remainder // 60
+
     if hours == 0:
-        return f"{minutes}min"
-    return f"{hours}h {minutes}min"
+        return f"{sign}{minutes}min"
+    
+    return f"{sign}{hours}h {minutes:02}min"

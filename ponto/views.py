@@ -136,8 +136,8 @@ def relatorio(request):
         tempo_trabalhado = timedelta(0)
         intervalo_real = timedelta(0)
         tem_intervalo = False
-        saldo_dia = timedelta(0)
         status = 'incompleto'
+        saldo_dia = timedelta(0)
 
         if len(regs) >= 2:
             for i in range(0, len(regs) - 1, 2):
@@ -150,7 +150,16 @@ def relatorio(request):
                 tem_intervalo = intervalo_real > timedelta(0)
 
             saldo_dia = tempo_trabalhado - jornada_esperada
-            status = 'positivo' if saldo_dia > timedelta(0) else 'negativo' if saldo_dia < timedelta(0) else 'zerado'
+
+            print("Tempo trabalhado:", tempo_trabalhado)
+            print("Saldo dia:", saldo_dia)
+
+            status = (
+                'positivo' if saldo_dia > timedelta(0)
+                else 'negativo' if saldo_dia < timedelta(0)
+                else 'zerado'
+            )
+
             saldo_acumulado += saldo_dia
 
         relatorio_dias.append({
@@ -163,11 +172,18 @@ def relatorio(request):
             'tem_intervalo': tem_intervalo,
         })
 
-    total_seconds = saldo_acumulado.total_seconds()
-    hours = int(total_seconds // 3600)
-    minutes = int(abs(total_seconds % 3600 // 60))
+    # =========================
+    # CORREÇÃO DO CÁLCULO AQUI
+    # =========================
+    total_seconds = int(saldo_acumulado.total_seconds())
+
     sign = '+' if total_seconds >= 0 else '-'
-    saldo_acumulado_str = f"{sign}{abs(hours)}h {minutes:02}min"
+    total_seconds = abs(total_seconds)
+
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes = remainder // 60
+
+    saldo_acumulado_str = f"{sign}{hours}h {minutes:02}min"
 
     context = {
         'mes_ano': hoje.strftime('%B/%Y').capitalize(),
@@ -177,7 +193,7 @@ def relatorio(request):
         'relatorio_dias': relatorio_dias,
         'saldo_acumulado': saldo_acumulado,
         'saldo_acumulado_str': saldo_acumulado_str,
-        'saldo_acumulado_class': 'text-success' if total_seconds >= 0 else 'text-danger',
+        'saldo_acumulado_class': 'text-success' if sign == '+' else 'text-danger',
         'hoje': hoje,
     }
 
