@@ -1,35 +1,75 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.http import HttpResponse
 from django.contrib import messages
 from .models import RegistroPonto
 from datetime import timedelta, datetime
+from collections import defaultdict
 
 
-def get_intervalo_dia(data):
-    inicio = timezone.make_aware(datetime.combine(data, datetime.min.time()))
-    fim = timezone.make_aware(datetime.combine(data, datetime.max.time()))
+def get_intervalo_referencia(data_referencia):
+    inicio = timezone.make_aware(datetime.combine(data_referencia, datetime.min.time()))
+    fim = timezone.make_aware(datetime.combine(data_referencia, datetime.max.time())) + timedelta(days=1) - timedelta(seconds=1)
     return inicio, fim
 
 
 @login_required
 def dashboard(request):
     hoje = timezone.localdate()
-    inicio, fim = get_intervalo_dia(hoje)
 
-    registros_hoje = RegistroPonto.objects.filter(
+    ultimo_registro = RegistroPonto.objects.filter(usuario=request.user).order_by('-data_hora').first()
+
+    if ultimo_registro and ultimo_registro.data_referencia:
+        # Verifica se o turno do último registro já está completo
+        registros_ultimo_turno = RegistroPonto.objects.filter(
+            usuario=request.user,
+            data_referencia=ultimo_registro.data_referencia
+        )
+        if len(registros_ultimo_turno) >= 4:
+            # Turno anterior fechado → usa hoje para novo turno
+            data_ref_atual = hoje
+        else:
+            # Turno ainda aberto → continua nele
+            data_ref_atual = ultimo_registro.data_referencia
+    else:
+        data_ref_atual = hoje
+
+    inicio, fim = get_intervalo_referencia(data_ref_atual)
+
+    registros_qs = RegistroPonto.objects.filter(
         usuario=request.user,
         data_hora__range=(inicio, fim)
-    ).order_by('data_hora')
+    )
 
-    ultimo_registro = registros_hoje.last()
-    proximo_tipo = 'Saída' if ultimo_registro and ultimo_registro.tipo == 'E' else 'Entrada'
+    ordem_etapas = {'E1': 1, 'S1': 2, 'E2': 3, 'S2': 4}
+    registros_atuais = RegistroPonto.objects.filter(
+        usuario=request.user,
+        data_referencia=data_ref_atual
+    ).order_by('posicao')
+
+    ultimo = registros_atuais.last() if registros_atuais.exists() else None
+
+    # Próximo tipo
+    if not ultimo:
+        proximo_tipo = 'Entrada Inicial (E1)'
+    else:
+        ultimo_tipo = ultimo.tipo_marcacao
+        if ultimo_tipo == 'E1':
+            proximo_tipo = 'Saída para Almoço (S1)'
+        elif ultimo_tipo == 'S1':
+            proximo_tipo = 'Volta do Almoço (E2)'
+        elif ultimo_tipo == 'E2':
+            proximo_tipo = 'Fim da Jornada (S2)'
+        elif ultimo_tipo == 'S2':
+            proximo_tipo = 'Turno completo (próximo turno)'
+        else:
+            proximo_tipo = 'Entrada Inicial (E1)'
 
     context = {
-        'registros_hoje': registros_hoje,
+        'registros_hoje': registros_atuais,
         'proximo_tipo': proximo_tipo,
         'hoje': hoje.strftime('%d/%m/%Y'),
+        'data_referencia_display': data_ref_atual.strftime('%d/%m/%Y'),
     }
     return render(request, 'ponto/dashboard.html', context)
 
@@ -39,48 +79,52 @@ def bater_ponto(request):
     if request.method != 'POST':
         return redirect('dashboard')
 
-    hoje = timezone.localdate()
-    inicio, fim = get_intervalo_dia(hoje)
+    agora = timezone.now()
+    hoje = timezone.localdate(agora)
 
-    registros_hoje = RegistroPonto.objects.filter(
-        usuario=request.user,
-        data_hora__range=(inicio, fim)
-    ).order_by('data_hora')
+    ultimo = RegistroPonto.objects.filter(usuario=request.user).order_by('-data_hora').first()
 
-    qtd_marcacoes = registros_hoje.count()
+    if ultimo and ultimo.posicao == 4:
+        data_ref = hoje
+        posicao_atual = 1
+    elif ultimo:
+        data_ref = ultimo.data_referencia
+        posicao_atual = ultimo.posicao + 1
+        if posicao_atual > 4:
+            posicao_atual = 1
+    else:
+        data_ref = hoje
+        posicao_atual = 1
 
-    proximo_tipo = 'Saída' if registros_hoje.last() and registros_hoje.last().tipo == 'E' else 'Entrada'
-
-    if qtd_marcacoes >= 4:
-        if hasattr(request, 'htmx') and request.htmx:
-            response = render(request, 'ponto/partials/marcacoes_hoje.html', {
-                'registros_hoje': registros_hoje,
-                'proximo_tipo': proximo_tipo,
-            })
-            response['HX-Trigger'] = 'showLimitToast'
-            return response
-
-        messages.warning(request, "Você já registrou o máximo de 4 marcações hoje.")
-        return redirect('dashboard')
-
-    ultimo = registros_hoje.last()
-    tipo = 'S' if ultimo and ultimo.tipo == 'E' else 'E'
+    pos_to_tipo = {1: 'E1', 2: 'S1', 3: 'E2', 4: 'S2'}
+    tipo_marcacao = pos_to_tipo.get(posicao_atual, 'E1')
 
     RegistroPonto.objects.create(
         usuario=request.user,
-        tipo=tipo
+        tipo_marcacao=tipo_marcacao,
+        data_referencia=data_ref,
+        posicao=posicao_atual
     )
 
-    registros_hoje = RegistroPonto.objects.filter(
+    registros_turno = RegistroPonto.objects.filter(
         usuario=request.user,
-        data_hora__range=(inicio, fim)
-    ).order_by('data_hora')
+        data_referencia=data_ref
+    ).order_by('posicao')
 
-    proximo_tipo = 'Entrada' if tipo == 'S' else 'Saída'
+    if posicao_atual == 4:
+        proximo_tipo = 'Turno completo'
+    else:
+        proximo_pos = posicao_atual + 1
+        proximo_tipo = {
+            1: 'Saída para Almoço (S1)',
+            2: 'Volta do Almoço (E2)',
+            3: 'Fim da Jornada (S2)',
+            4: 'Turno completo'
+        }.get(proximo_pos, 'Próxima etapa')
 
-    if hasattr(request, 'htmx') and request.htmx:
+    if request.htmx:
         return render(request, 'ponto/partials/marcacoes_hoje.html', {
-            'registros_hoje': registros_hoje,
+            'registros_hoje': registros_turno,
             'proximo_tipo': proximo_tipo,
         })
 
@@ -112,25 +156,21 @@ def relatorio(request):
         data_inicio = primeiro_dia
         data_fim = ultimo_dia
 
-    inicio = timezone.make_aware(datetime.combine(data_inicio, datetime.min.time()))
-    fim = timezone.make_aware(datetime.combine(data_fim, datetime.max.time()))
-
     registros_periodo = RegistroPonto.objects.filter(
         usuario=request.user,
-        data_hora__range=(inicio, fim)
-    ).order_by('data_hora')
+        data_referencia__range=(data_inicio, data_fim)
+    )
 
-    dias = {}
+    dias = defaultdict(list)
     for reg in registros_periodo:
-        dia = timezone.localtime(reg.data_hora).date()
-        if dia not in dias:
-            dias[dia] = []
-        dias[dia].append(reg)
+        dias[reg.data_referencia].append(reg)
 
     jornada_esperada = timedelta(hours=8)
 
     relatorio_dias = []
     saldo_acumulado = timedelta(0)
+
+    ordem_etapas = {'E1': 1, 'S1': 2, 'E2': 3, 'S2': 4}
 
     for dia, regs in sorted(dias.items()):
         tempo_trabalhado = timedelta(0)
@@ -139,32 +179,39 @@ def relatorio(request):
         status = 'incompleto'
         saldo_dia = timedelta(0)
 
-        if len(regs) >= 2:
-            for i in range(0, len(regs) - 1, 2):
-                entrada = regs[i].data_hora
-                saida = regs[i+1].data_hora
-                tempo_trabalhado += saida - entrada
+        # Ordenação lógica pela sequência da jornada
+        regs_ordenados = sorted(regs, key=lambda r: ordem_etapas.get(r.tipo_marcacao, 99))
 
-            if len(regs) == 4:
-                intervalo_real = regs[2].data_hora - regs[1].data_hora
-                tem_intervalo = intervalo_real > timedelta(0)
+        if len(regs_ordenados) == 4:
+            try:
+                e1 = next(r.data_hora for r in regs_ordenados if r.tipo_marcacao == 'E1')
+                s1 = next(r.data_hora for r in regs_ordenados if r.tipo_marcacao == 'S1')
+                e2 = next(r.data_hora for r in regs_ordenados if r.tipo_marcacao == 'E2')
+                s2 = next(r.data_hora for r in regs_ordenados if r.tipo_marcacao == 'S2')
 
-            saldo_dia = tempo_trabalhado - jornada_esperada
+                # Ajuste para fim da jornada no dia seguinte
+                if s2 < e2:
+                    s2 += timedelta(days=1)
 
-            print("Tempo trabalhado:", tempo_trabalhado)
-            print("Saldo dia:", saldo_dia)
+                tempo_trabalhado = (s1 - e1) + (s2 - e2)
+                intervalo_real = e2 - s1
+                tem_intervalo = intervalo_real > timedelta(minutes=5)
 
-            status = (
-                'positivo' if saldo_dia > timedelta(0)
-                else 'negativo' if saldo_dia < timedelta(0)
-                else 'zerado'
-            )
+                saldo_dia = tempo_trabalhado - jornada_esperada
 
-            saldo_acumulado += saldo_dia
+                status = (
+                    'positivo' if saldo_dia > timedelta(0)
+                    else 'negativo' if saldo_dia < timedelta(0)
+                    else 'zerado'
+                )
+
+                saldo_acumulado += saldo_dia
+            except StopIteration:
+                pass  # incompleto
 
         relatorio_dias.append({
             'dia': dia,
-            'marcações': regs,
+            'marcações': regs_ordenados,
             'tempo_trabalhado': tempo_trabalhado,
             'intervalo_real': intervalo_real,
             'saldo_dia': saldo_dia,
@@ -172,17 +219,12 @@ def relatorio(request):
             'tem_intervalo': tem_intervalo,
         })
 
-    # =========================
-    # CORREÇÃO DO CÁLCULO AQUI
-    # =========================
+    # Formatação do saldo acumulado
     total_seconds = int(saldo_acumulado.total_seconds())
-
     sign = '+' if total_seconds >= 0 else '-'
     total_seconds = abs(total_seconds)
-
     hours, remainder = divmod(total_seconds, 3600)
     minutes = remainder // 60
-
     saldo_acumulado_str = f"{sign}{hours}h {minutes:02}min"
 
     context = {
@@ -193,7 +235,7 @@ def relatorio(request):
         'relatorio_dias': relatorio_dias,
         'saldo_acumulado': saldo_acumulado,
         'saldo_acumulado_str': saldo_acumulado_str,
-        'saldo_acumulado_class': 'text-success' if sign == '+' else 'text-danger',
+        'saldo_acumulado_class': 'text-success' if sign == '+' else 'text-danger' if sign == '-' else 'text-muted',
         'hoje': hoje,
     }
 

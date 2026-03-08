@@ -90,8 +90,15 @@
                                         <td>
                                             {% for reg in item.marcações %}
                                                 <span class="badge 
-                                                    {% if reg.tipo == 'E' %} bg-success-subtle text-success {% else %} bg-danger-subtle text-danger {% endif %} me-1">
-                                                    {{ reg.get_tipo_display }} {{ reg.data_hora|time:"H:i" }}
+                                                    {% if 'E' in reg.tipo_marcacao %} bg-success-subtle text-success 
+                                                    {% else %} bg-danger-subtle text-danger {% endif %} me-1">
+                                                    {# Aqui a mágica: mapeamos de volta para Entrada/Saída #}
+                                                    {% if reg.tipo_marcacao == 'E1' or reg.tipo_marcacao == 'E2' %}
+                                                        Entrada
+                                                    {% else %}
+                                                        Saída
+                                                    {% endif %}
+                                                    {{ reg.data_hora|time:"H:i" }}
                                                 </span>
                                             {% empty %}
                                                 <span class="text-muted">Nenhuma</span>
